@@ -1,26 +1,35 @@
 package github.boxiaolanya2008.lanv_tool.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,243 +49,519 @@ import github.boxiaolanya2008.lanv_tool.data.model.PropertyState
 import github.boxiaolanya2008.lanv_tool.data.model.PropertyType
 
 @Composable
-fun PropertyCard(
+fun PropertyToggleItem(
     state: PropertyState,
     isApplying: Boolean,
     onApply: (String) -> Unit,
     onRestore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showDropdown by remember { mutableStateOf(false) }
-    var sliderValue by remember(state.currentValue) {
-        mutableFloatStateOf(state.currentValue?.toFloatOrNull() ?: 0f)
-    }
-
     val isModified = state.isModified
     val isEmpty = state.currentValue?.isEmpty() == true && state.originalValue != null
-    val tag = if (state.property.displayName == "内存融合") "内存融合" else "UI显示"
-    val tagColor = if (tag == "内存融合") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary
-    val statusColor = when {
-        isEmpty -> MaterialTheme.colorScheme.error
-        isModified -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.outline
+    val isEnabled = isModified || isEmpty
+
+    val containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        when (val type = state.property.type) {
+            is PropertyType.Selection -> {
+                if (type.options.size == 2 && type.options.contains("0") && type.options.contains("1")) {
+                    BinaryToggleContent(state, isApplying, onApply, onRestore)
+                } else if (type.options.size == 1 && type.options.contains("true")) {
+                    BinaryToggleContent(state, isApplying, onApply, onRestore)
+                } else {
+                    MultiOptionContent(state, type, isApplying, onApply, onRestore)
+                }
+            }
+            is PropertyType.Range -> {
+                RangeSliderContent(state, type, isApplying, onApply)
+            }
+        }
     }
+}
+
+@Composable
+private fun BinaryToggleContent(
+    state: PropertyState,
+    isApplying: Boolean,
+    onApply: (String) -> Unit,
+    onRestore: () -> Unit
+) {
+    val isOn = state.currentValue == "1" || state.currentValue == "true"
+    val isModified = state.isModified
+    val tag = getPropertyTag(state.property.key)
 
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .fillMaxHeight()
-                .background(statusColor)
-        )
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = state.property.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = state.property.key,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = state.property.displayName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (tag != null) {
+                    PropertyTag(text = tag)
+                    if (isModified) Spacer(modifier = Modifier.width(6.dp))
                 }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(tagColor.copy(alpha = 0.15f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = tag,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = tagColor,
-                        fontWeight = FontWeight.Medium
+                if (isModified) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = state.property.description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                maxLines = 2
             )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                thickness = 0.5.dp
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        if (isApplying) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = if (isEmpty) "已清空" else "当前值",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = if (isEmpty) "(原始: ${state.originalValue})" else (state.currentValue ?: "N/A"),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = when {
-                            isEmpty -> MaterialTheme.colorScheme.error
-                            isModified -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.onSurface
-                        },
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = if (isModified || isEmpty) FontWeight.Medium else FontWeight.Normal
-                    )
-                }
-
-                if (isModified || isEmpty) {
-                    TextButton(onClick = onRestore) {
-                        Text(
-                            text = "还原",
-                            color = MaterialTheme.colorScheme.tertiary,
-                            fontWeight = FontWeight.Bold
-                        )
+        } else {
+            Switch(
+                checked = isOn,
+                onCheckedChange = { checked ->
+                    val newValue = if (state.property.type is PropertyType.Selection &&
+                        state.property.type.options.contains("true")
+                    ) {
+                        if (checked) "true" else ""
+                    } else {
+                        if (checked) "1" else "0"
                     }
+                    onApply(newValue)
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun MultiOptionContent(
+    state: PropertyState,
+    type: PropertyType.Selection,
+    isApplying: Boolean,
+    onApply: (String) -> Unit,
+    onRestore: () -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val isModified = state.isModified
+    val tag = getPropertyTag(state.property.key)
+    val displayValue = when {
+        state.currentValue?.isEmpty() == true -> "已清空"
+        state.currentValue != null -> state.currentValue
+        else -> "未设置"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !isApplying) { showDialog = true }
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = state.property.displayName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (tag != null) {
+                    PropertyTag(text = tag)
+                    if (isModified) Spacer(modifier = Modifier.width(6.dp))
+                }
+                if (isModified) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
                 }
             }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = state.property.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = if (isModified) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.clickable(enabled = !isApplying) { showDialog = true }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = displayValue,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace,
+                    color = if (isModified) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 
-            Spacer(modifier = Modifier.height(8.dp))
+    if (showDialog) {
+        MultiOptionDialog(
+            state = state,
+            options = type.options,
+            allowEmpty = type.allowEmpty,
+            allowCustom = type.allowCustom,
+            onDismiss = { showDialog = false },
+            onSelect = { value ->
+                showDialog = false
+                onApply(value)
+            }
+        )
+    }
+}
 
-            when (val type = state.property.type) {
-                is PropertyType.Selection -> {
-                    Box {
-                        OutlinedButton(
-                            onClick = { showDropdown = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isApplying,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            if (isApplying) {
-                                CircularProgressIndicator(
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.height(16.dp).width(16.dp)
-                                )
-                            } else {
-                                Text(if (isModified || isEmpty) "修改" else "选择值")
-                            }
-                        }
+@Composable
+private fun MultiOptionDialog(
+    state: PropertyState,
+    options: List<String>,
+    allowEmpty: Boolean,
+    allowCustom: Boolean,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    var showCustomInput by remember { mutableStateOf(false) }
+    var customValue by remember { mutableStateOf("") }
 
-                        DropdownMenu(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false }
-                        ) {
-                            type.options.forEach { option ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = option,
-                                            fontFamily = FontFamily.Monospace
-                                        )
-                                    },
-                                    onClick = {
-                                        showDropdown = false
-                                        onApply(option)
-                                    }
-                                )
-                            }
-                            if (type.allowEmpty) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = "空值",
-                                            fontFamily = FontFamily.Monospace,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    },
-                                    onClick = {
-                                        showDropdown = false
-                                        onApply("")
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                is PropertyType.Range -> {
-                    Column {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = state.property.displayName,
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = state.property.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                options.forEach { option ->
+                    val isSelected = state.currentValue == option
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(option) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surface
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${type.min}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = option,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontFamily = FontFamily.Monospace,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurface
                             )
-                            Text(
-                                text = sliderValue.toInt().toString(),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontFamily = FontFamily.Monospace
-                            )
-                            Text(
-                                text = "${type.max}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                if (allowCustom) {
+                    if (!showCustomInput) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showCustomInput = true },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "自定义值...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Slider(
-                            value = sliderValue,
-                            onValueChange = { sliderValue = it },
-                            onValueChangeFinished = {
-                                onApply(sliderValue.toInt().toString())
-                            },
-                            valueRange = type.min.toFloat()..type.max.toFloat(),
-                            steps = ((type.max - type.min) / type.step) - 1,
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary
-                            ),
-                            enabled = !isApplying
+                    } else {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val formatHint = if (state.property.key == "persist.sys.dc1p_supported_fps") {
+                            "格式: 60|120 或 144|144"
+                        } else null
+                        OutlinedTextField(
+                            value = customValue,
+                            onValueChange = { customValue = it },
+                            label = { Text("自定义值") },
+                            supportingText = if (formatHint != null) {
+                                { Text(formatHint) }
+                            } else null,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { showCustomInput = false }) {
+                                Text("取消")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(
+                                onClick = {
+                                    if (customValue.isNotBlank()) {
+                                        onSelect(customValue.trim())
+                                    }
+                                },
+                                enabled = customValue.isNotBlank()
+                            ) {
+                                Text("应用")
+                            }
+                        }
+                    }
+                }
+
+                if (allowEmpty) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val isEmptySelected = state.currentValue?.isEmpty() == true
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect("") },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isEmptySelected) MaterialTheme.colorScheme.errorContainer
+                        else MaterialTheme.colorScheme.surface
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "空值（禁用）",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (isEmptySelected) MaterialTheme.colorScheme.onErrorContainer
+                                else MaterialTheme.colorScheme.error
+                            )
+                            if (isEmptySelected) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
+        },
+        confirmButton = {}
+    )
+}
+
+@Composable
+private fun RangeSliderContent(
+    state: PropertyState,
+    type: PropertyType.Range,
+    isApplying: Boolean,
+    onApply: (String) -> Unit
+) {
+    var sliderValue by remember(state.currentValue) {
+        mutableFloatStateOf(state.currentValue?.toFloatOrNull() ?: type.min.toFloat())
+    }
+    val isModified = state.isModified
+    val tag = getPropertyTag(state.property.key)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = state.property.displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (tag != null) {
+                        PropertyTag(text = tag)
+                        if (isModified) Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    if (isModified) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = state.property.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isModified) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ) {
+                Text(
+                    text = "${sliderValue.toInt()}W",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isModified) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${type.min}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                onValueChangeFinished = { onApply(sliderValue.toInt().toString()) },
+                valueRange = type.min.toFloat()..type.max.toFloat(),
+                steps = ((type.max - type.min) / type.step) - 1,
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                enabled = !isApplying,
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+            )
+            Text(
+                text = "${type.max}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
+}
+
+@Composable
+private fun PropertyTag(text: String) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
+
+private fun getPropertyTag(key: String): String? = when (key) {
+    "persist.vendor.vivo.zramwb.size" -> "内存融合"
+    "persist.vivo.charging_power_max" -> "UI显示"
+    "persist.vivo.displayic.software" -> "UI显示"
+    "persist.vivo.imagingic.ver" -> "UI显示"
+    "persist.vivo.displayic.ver" -> "UI显示"
+    "persist.vivo.predict_chg_time" -> "UI显示"
+    "persist.sys.promotion_supported" -> "UI显示"
+    "persist.sys.dc1p_supported_fps" -> "帧率"
+    "persist.sys.private_fps" -> "帧率"
+    "persist.vivo.gamecube.support_fps" -> "帧率"
+    "persist.vivo.phone.fps_default" -> "帧率"
+    "persist.vivo.phone.fps_max" -> "帧率"
+    else -> null
 }

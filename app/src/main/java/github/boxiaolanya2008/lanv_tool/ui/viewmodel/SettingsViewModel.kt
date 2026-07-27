@@ -2,66 +2,99 @@ package github.boxiaolanya2008.lanv_tool.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import github.boxiaolanya2008.lanv_tool.data.repository.PropertyRepository
 import github.boxiaolanya2008.lanv_tool.data.repository.SettingsRepository
-import kotlinx.coroutines.flow.MutableStateFlow
+import github.boxiaolanya2008.lanv_tool.domain.usecase.GetSettingsUseCase
+import github.boxiaolanya2008.lanv_tool.domain.usecase.UpdateSettingsUseCase
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-data class SettingsUiState(
-    val autoBackup: Boolean = true,
-    val confirmBeforeApply: Boolean = true,
-    val appVersion: String = "1.0",
-    val totalProperties: Int = 0,
-    val modifiedCount: Int = 0
-)
+sealed interface SettingsUiState {
+    data object Loading : SettingsUiState
+    data class Success(
+        val autoBackup: Boolean,
+        val confirmBeforeApply: Boolean,
+        val appVersion: String,
+        val totalProperties: Int,
+        val modifiedCount: Int
+    ) : SettingsUiState
+}
+
+sealed interface SettingsAction {
+    data class SetAutoBackup(val enabled: Boolean) : SettingsAction
+    data class SetConfirmBeforeApply(val enabled: Boolean) : SettingsAction
+    data object ClearAllBackups : SettingsAction
+}
 
 class SettingsViewModel(
-    private val settingsRepository: SettingsRepository,
-    private val propertyRepository: PropertyRepository
+    private val getSettingsUseCase: GetSettingsUseCase,
+    private val updateSettingsUseCase: UpdateSettingsUseCase,
+    private val propertyRepository: PropertyRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
-
-    init {
-        loadSettings()
-    }
-
-    private fun loadSettings() {
-        val states = propertyRepository.getAllPropertyStates()
-        _uiState.value = SettingsUiState(
-            autoBackup = settingsRepository.autoBackup,
-            confirmBeforeApply = settingsRepository.confirmBeforeApply,
-            appVersion = settingsRepository.appVersion,
-            totalProperties = states.size,
-            modifiedCount = states.count { it.isModified }
+    val uiState: StateFlow<SettingsUiState> = combine(
+        getSettingsUseCase.observeAutoBackup(),
+        getSettingsUseCase.observeConfirmBeforeApply(),
+        propertyRepository.observeProperties()
+    ) { autoBackup, confirmBeforeApply, properties ->
+        SettingsUiState.Success(
+            autoBackup = autoBackup,
+            confirmBeforeApply = confirmBeforeApply,
+            appVersion = settingsRepository.let { getSettingsUseCase.getAppVersion() },
+            totalProperties = properties.size,
+            modifiedCount = properties.count { it.isModified }
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SettingsUiState.Loading
+    )
+
+    fun onAction(action: SettingsAction) {
+        when (action) {
+            is SettingsAction.SetAutoBackup -> setAutoBackup(action.enabled)
+            is SettingsAction.SetConfirmBeforeApply -> setConfirmBeforeApply(action.enabled)
+            SettingsAction.ClearAllBackups -> clearAllBackups()
+        }
     }
 
-    fun setAutoBackup(enabled: Boolean) {
-        settingsRepository.autoBackup = enabled
-        _uiState.value = _uiState.value.copy(autoBackup = enabled)
+    private fun setAutoBackup(enabled: Boolean) {
+        viewModelScope.launch {
+            updateSettingsUseCase.setAutoBackup(enabled)
+        }
     }
 
-    fun setConfirmBeforeApply(enabled: Boolean) {
-        settingsRepository.confirmBeforeApply = enabled
-        _uiState.value = _uiState.value.copy(confirmBeforeApply = enabled)
+    private fun setConfirmBeforeApply(enabled: Boolean) {
+        viewModelScope.launch {
+            updateSettingsUseCase.setConfirmBeforeApply(enabled)
+        }
     }
 
-    fun clearAllBackups(onDone: () -> Unit) {
-        propertyRepository.clearAllBackups()
-        loadSettings()
-        onDone()
+    private fun clearAllBackups() {
+        viewModelScope.launch {
+            propertyRepository.clearAllBackups()
+        }
     }
 
     class Factory(
-        private val settingsRepository: SettingsRepository,
-        private val propertyRepository: PropertyRepository
+        private val getSettingsUseCase: GetSettingsUseCase,
+        private val updateSettingsUseCase: UpdateSettingsUseCase,
+        private val propertyRepository: PropertyRepository,
+        private val settingsRepository: SettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return SettingsViewModel(settingsRepository, propertyRepository) as T
+            return SettingsViewModel(
+                getSettingsUseCase = getSettingsUseCase,
+                updateSettingsUseCase = updateSettingsUseCase,
+                propertyRepository = propertyRepository,
+                settingsRepository = settingsRepository
+            ) as T
         }
     }
 }

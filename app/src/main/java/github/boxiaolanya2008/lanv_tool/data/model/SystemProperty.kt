@@ -1,7 +1,7 @@
 package github.boxiaolanya2008.lanv_tool.data.model
 
 sealed class PropertyType {
-    data class Selection(val options: List<String>, val allowEmpty: Boolean = true) : PropertyType()
+    data class Selection(val options: List<String>, val allowEmpty: Boolean = true, val allowCustom: Boolean = false) : PropertyType()
     data class Range(val min: Int, val max: Int, val step: Int = 1) : PropertyType()
 }
 
@@ -138,6 +138,41 @@ object PropertyRegistry {
             description = "Vulkan 渲染下的游戏插帧补帧（0=关闭 1=开启）",
             type = PropertyType.Selection(listOf("0", "1"), allowEmpty = true),
             category = PropertyCategory.GAME
+        ),
+        SystemProperty(
+            key = "persist.sys.dc1p_supported_fps",
+            displayName = "DC1P支持帧率",
+            description = "DC1P支持的刷新率模式（60Hz/120Hz）",
+            type = PropertyType.Selection(listOf("60", "120"), allowEmpty = true, allowCustom = true),
+            category = PropertyCategory.DISPLAY
+        ),
+        SystemProperty(
+            key = "persist.sys.private_fps",
+            displayName = "私有帧率",
+            description = "私有刷新率模式（144Hz）",
+            type = PropertyType.Selection(listOf("144"), allowEmpty = true, allowCustom = true),
+            category = PropertyCategory.DISPLAY
+        ),
+        SystemProperty(
+            key = "persist.vivo.gamecube.support_fps",
+            displayName = "游戏魔方帧率支持",
+            description = "游戏魔方帧率支持模式",
+            type = PropertyType.Selection(listOf("1"), allowEmpty = true, allowCustom = true),
+            category = PropertyCategory.GAME
+        ),
+        SystemProperty(
+            key = "persist.vivo.phone.fps_default",
+            displayName = "默认帧率模式",
+            description = "手机默认刷新率模式",
+            type = PropertyType.Selection(listOf("1"), allowEmpty = true, allowCustom = true),
+            category = PropertyCategory.DISPLAY
+        ),
+        SystemProperty(
+            key = "persist.vivo.phone.fps_max",
+            displayName = "最大帧率",
+            description = "手机支持的最大刷新率（120Hz）",
+            type = PropertyType.Selection(listOf("120"), allowEmpty = true, allowCustom = true),
+            category = PropertyCategory.DISPLAY
         )
     )
 

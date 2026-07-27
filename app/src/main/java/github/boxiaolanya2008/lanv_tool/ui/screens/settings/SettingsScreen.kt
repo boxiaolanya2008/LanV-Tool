@@ -3,6 +3,7 @@ package github.boxiaolanya2008.lanv_tool.ui.screens.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,7 +35,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,15 +45,31 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import github.boxiaolanya2008.lanv_tool.ui.viewmodel.SettingsAction
+import github.boxiaolanya2008.lanv_tool.ui.viewmodel.SettingsUiState
 import github.boxiaolanya2008.lanv_tool.ui.viewmodel.SettingsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
+fun SettingsRoute(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    SettingsScreen(
+        state = state,
+        onAction = viewModel::onAction,
+        onNavigateBack = onNavigateBack
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SettingsScreen(
+    state: SettingsUiState,
+    onAction: (SettingsAction) -> Unit,
+    onNavigateBack: () -> Unit
+) {
     var showClearDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -72,70 +89,107 @@ fun SettingsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            SettingsSection(title = "常规") {
-                SettingsSwitchItem(
-                    icon = Icons.Filled.Settings,
-                    title = "应用前确认",
-                    description = "修改属性前弹出确认对话框",
-                    checked = uiState.confirmBeforeApply,
-                    onCheckedChange = { viewModel.setConfirmBeforeApply(it) }
-                )
-            }
+        when (state) {
+            SettingsUiState.Loading -> SettingsLoadingContent(padding)
+            is SettingsUiState.Success -> SettingsContent(
+                padding = padding,
+                state = state,
+                onAction = onAction,
+                showClearDialog = showClearDialog,
+                onShowClearDialog = { showClearDialog = true },
+                onDismissClearDialog = { showClearDialog = false }
+            )
+        }
+    }
+}
 
-            SettingsSection(title = "数据") {
-                SettingsInfoItem(
-                    icon = Icons.Filled.Info,
-                    title = "已备份属性",
-                    value = "${uiState.totalProperties} 个"
-                )
-                SettingsInfoItem(
-                    icon = Icons.Filled.Cached,
-                    title = "已修改属性",
-                    value = "${uiState.modifiedCount} 个"
-                )
-                SettingsActionItem(
-                    icon = Icons.Filled.Delete,
-                    title = "清除所有备份",
-                    description = "删除所有保存的原始值，下次启动重新获取",
-                    titleColor = MaterialTheme.colorScheme.error,
-                    onClick = { showClearDialog = true }
-                )
-            }
+@Composable
+private fun SettingsLoadingContent(padding: androidx.compose.foundation.layout.PaddingValues) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
 
-            SettingsSection(title = "关于") {
-                SettingsInfoItem(
-                    icon = Icons.Filled.Info,
-                    title = "版本",
-                    value = uiState.appVersion
-                )
-            }
+@Composable
+private fun SettingsContent(
+    padding: androidx.compose.foundation.layout.PaddingValues,
+    state: SettingsUiState.Success,
+    onAction: (SettingsAction) -> Unit,
+    showClearDialog: Boolean,
+    onShowClearDialog: () -> Unit,
+    onDismissClearDialog: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        SettingsSection(title = "常规") {
+            SettingsSwitchItem(
+                icon = Icons.Filled.Settings,
+                title = "应用前确认",
+                description = "修改属性前弹出确认对话框",
+                checked = state.confirmBeforeApply,
+                onCheckedChange = { onAction(SettingsAction.SetConfirmBeforeApply(it)) }
+            )
+        }
+
+        SettingsSection(title = "数据") {
+            SettingsInfoItem(
+                icon = Icons.Filled.Info,
+                title = "已备份属性",
+                value = "${state.totalProperties} 个"
+            )
+            SettingsInfoItem(
+                icon = Icons.Filled.Cached,
+                title = "已修改属性",
+                value = "${state.modifiedCount} 个"
+            )
+            SettingsActionItem(
+                icon = Icons.Filled.Delete,
+                title = "清除所有备份",
+                description = "删除所有保存的原始值，下次启动重新获取",
+                titleColor = MaterialTheme.colorScheme.error,
+                onClick = onShowClearDialog
+            )
+        }
+
+        SettingsSection(title = "关于") {
+            SettingsInfoItem(
+                icon = Icons.Filled.Info,
+                title = "版本",
+                value = state.appVersion
+            )
         }
     }
 
     if (showClearDialog) {
         AlertDialog(
-            onDismissRequest = { showClearDialog = false },
+            onDismissRequest = onDismissClearDialog,
             title = { Text("清除备份") },
             text = { Text("确定要删除所有保存的原始值吗？此操作不可撤销。") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.clearAllBackups { showClearDialog = false }
+                        onAction(SettingsAction.ClearAllBackups)
+                        onDismissClearDialog()
                     }
                 ) {
                     Text("确定", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
+                TextButton(onClick = onDismissClearDialog) {
                     Text("取消")
                 }
             }
@@ -157,7 +211,7 @@ private fun SettingsSection(
         )
         Card(
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
