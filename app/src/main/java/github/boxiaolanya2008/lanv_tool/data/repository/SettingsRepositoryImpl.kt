@@ -21,17 +21,21 @@ internal class SettingsRepositoryImpl(
         private const val KEY_CONFIRM_BEFORE_APPLY = "confirm_before_apply"
         private const val KEY_LAST_RESTORE_TIME = "last_restore_time"
         private const val KEY_APP_VERSION = "app_version"
+        private const val KEY_PREDICTIVE_BACK = "predictive_back"
     }
 
     private val _darkMode = MutableStateFlow(prefs.getBoolean(KEY_DARK_MODE, false))
     private val _autoBackup = MutableStateFlow(prefs.getBoolean(KEY_AUTO_BACKUP, true))
     private val _confirmBeforeApply = MutableStateFlow(prefs.getBoolean(KEY_CONFIRM_BEFORE_APPLY, true))
+    private val _predictiveBack = MutableStateFlow(prefs.getBoolean(KEY_PREDICTIVE_BACK, true))
 
     override fun observeDarkMode(): Flow<Boolean> = _darkMode.asStateFlow()
 
     override fun observeAutoBackup(): Flow<Boolean> = _autoBackup.asStateFlow()
 
     override fun observeConfirmBeforeApply(): Flow<Boolean> = _confirmBeforeApply.asStateFlow()
+
+    override fun observePredictiveBack(): Flow<Boolean> = _predictiveBack.asStateFlow()
 
     override suspend fun setDarkMode(enabled: Boolean) {
         withContext(Dispatchers.IO) {
@@ -51,6 +55,13 @@ internal class SettingsRepositoryImpl(
         withContext(Dispatchers.IO) {
             prefs.edit().putBoolean(KEY_CONFIRM_BEFORE_APPLY, enabled).apply()
             _confirmBeforeApply.value = enabled
+        }
+    }
+
+    override suspend fun setPredictiveBack(enabled: Boolean) {
+        withContext(Dispatchers.IO) {
+            prefs.edit().putBoolean(KEY_PREDICTIVE_BACK, enabled).apply()
+            _predictiveBack.value = enabled
         }
     }
 

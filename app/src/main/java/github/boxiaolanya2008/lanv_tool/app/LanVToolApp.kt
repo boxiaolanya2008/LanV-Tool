@@ -1,6 +1,8 @@
 package github.boxiaolanya2008.lanv_tool.app
 
 import android.app.Application
+import github.boxiaolanya2008.lanv_tool.data.repository.FpsRepository
+import github.boxiaolanya2008.lanv_tool.data.repository.FpsRepositoryImpl
 import github.boxiaolanya2008.lanv_tool.data.repository.PropertyRepository
 import github.boxiaolanya2008.lanv_tool.data.repository.PropertyRepositoryImpl
 import github.boxiaolanya2008.lanv_tool.data.repository.SettingsRepository
@@ -46,6 +48,9 @@ class LanVToolApp : Application() {
     lateinit var updateSettingsUseCase: UpdateSettingsUseCase
         private set
 
+    lateinit var fpsRepository: FpsRepository
+        private set
+
     override fun onCreate() {
         super.onCreate()
 
@@ -60,6 +65,7 @@ class LanVToolApp : Application() {
         observePropertiesUseCase = ObservePropertiesUseCase(propertyRepository)
         getSettingsUseCase = GetSettingsUseCase(settingsRepository)
         updateSettingsUseCase = UpdateSettingsUseCase(settingsRepository)
+        fpsRepository = FpsRepositoryImpl()
     }
 
     companion object {

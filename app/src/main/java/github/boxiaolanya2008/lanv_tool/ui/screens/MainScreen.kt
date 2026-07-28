@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,7 +61,8 @@ import github.boxiaolanya2008.lanv_tool.ui.viewmodel.PropertyViewModel
 fun PropertyRoute(
     viewModel: PropertyViewModel,
     onNavigateToCategory: (PropertyCategory) -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToFps: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
@@ -78,7 +80,8 @@ fun PropertyRoute(
         snackbarHostState = snackbarHostState,
         onAction = viewModel::onAction,
         onNavigateToCategory = onNavigateToCategory,
-        onNavigateToSettings = onNavigateToSettings
+        onNavigateToSettings = onNavigateToSettings,
+        onNavigateToFps = onNavigateToFps
     )
 }
 
@@ -89,7 +92,8 @@ internal fun CategoryListScreen(
     snackbarHostState: SnackbarHostState,
     onAction: (PropertyAction) -> Unit,
     onNavigateToCategory: (PropertyCategory) -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToFps: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -138,7 +142,8 @@ internal fun CategoryListScreen(
                 paddingValues = paddingValues,
                 state = state,
                 onAction = onAction,
-                onNavigateToCategory = onNavigateToCategory
+                onNavigateToCategory = onNavigateToCategory,
+                onNavigateToFps = onNavigateToFps
             )
         }
     }
@@ -238,7 +243,8 @@ private fun CategoryListContent(
     paddingValues: PaddingValues,
     state: PropertyUiState.Success,
     onAction: (PropertyAction) -> Unit,
-    onNavigateToCategory: (PropertyCategory) -> Unit
+    onNavigateToCategory: (PropertyCategory) -> Unit,
+    onNavigateToFps: () -> Unit
 ) {
     val categoryStats = state.categories.map { category ->
         val properties = state.properties.filter { it.property.category == category }
@@ -288,6 +294,11 @@ private fun CategoryListContent(
                 onClick = { onNavigateToCategory(stat.category) }
             )
         }
+
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            FpsEntryCard(onClick = onNavigateToFps)
+        }
     }
 }
 
@@ -302,13 +313,6 @@ private fun CategoryCard(
     stat: CategoryStat,
     onClick: () -> Unit
 ) {
-    val icon = when (stat.category) {
-        PropertyCategory.MEMORY -> Icons.Filled.Memory
-        PropertyCategory.DISPLAY -> Icons.Filled.PhoneAndroid
-        PropertyCategory.CHARGING -> Icons.Filled.BatteryChargingFull
-        PropertyCategory.GAME -> Icons.Filled.SportsEsports
-    }
-
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -322,23 +326,6 @@ private fun CategoryCard(
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .size(28.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stat.category.label,
@@ -355,6 +342,45 @@ private fun CategoryCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (stat.modifiedCount > 0) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun FpsEntryCard(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "自定义应用FPS",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "为每个应用单独设置帧率上限",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Icon(

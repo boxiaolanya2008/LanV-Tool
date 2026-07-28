@@ -16,9 +16,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Cached
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -142,6 +146,13 @@ private fun SettingsContent(
                 checked = state.confirmBeforeApply,
                 onCheckedChange = { onAction(SettingsAction.SetConfirmBeforeApply(it)) }
             )
+            SettingsSwitchItem(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                title = "预返回动画",
+                description = "侧滑返回时预览上一页",
+                checked = state.predictiveBack,
+                onCheckedChange = { onAction(SettingsAction.SetPredictiveBack(it)) }
+            )
         }
 
         SettingsSection(title = "数据") {
@@ -169,6 +180,26 @@ private fun SettingsContent(
                 icon = Icons.Filled.Info,
                 title = "版本",
                 value = state.appVersion
+            )
+            SettingsInfoItem(
+                icon = Icons.Filled.Person,
+                title = "开发者",
+                value = "栖晞"
+            )
+            SettingsInfoItem(
+                icon = Icons.Filled.Code,
+                title = "GitHub",
+                value = "boxiaolanya2008"
+            )
+            SettingsInfoItem(
+                icon = Icons.AutoMirrored.Filled.Chat,
+                title = "QQ",
+                value = "3520687734"
+            )
+            SettingsInfoItem(
+                icon = Icons.Filled.Favorite,
+                title = "介绍",
+                value = "努力寻找对象ing......"
             )
         }
     }

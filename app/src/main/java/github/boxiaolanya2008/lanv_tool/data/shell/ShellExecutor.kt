@@ -34,18 +34,7 @@ object ShellExecutor {
             if (result.isSuccess) return result
         }
 
-        val whichResult = execute("which su")
-        if (whichResult.isSuccess && whichResult.stdout.isNotBlank()) {
-            val path = whichResult.stdout.lines().first().trim()
-            val result = runSu(path, command)
-            if (result.isSuccess) {
-                suPath = path
-                return result
-            }
-        }
-
         val suPaths = listOf(
-            "su",
             "/system/bin/su",
             "/system/xbin/su",
             "/sbin/su",
@@ -55,7 +44,8 @@ object ShellExecutor {
             "/data/adb/magisk/su",
             "/data/adb/apd/su",
             "/su/bin/su",
-            "/system/sbin/su"
+            "/system/sbin/su",
+            "su"
         )
 
         for (path in suPaths) {

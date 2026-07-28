@@ -18,6 +18,7 @@ sealed interface SettingsUiState {
     data class Success(
         val autoBackup: Boolean,
         val confirmBeforeApply: Boolean,
+        val predictiveBack: Boolean,
         val appVersion: String,
         val totalProperties: Int,
         val modifiedCount: Int
@@ -27,6 +28,7 @@ sealed interface SettingsUiState {
 sealed interface SettingsAction {
     data class SetAutoBackup(val enabled: Boolean) : SettingsAction
     data class SetConfirmBeforeApply(val enabled: Boolean) : SettingsAction
+    data class SetPredictiveBack(val enabled: Boolean) : SettingsAction
     data object ClearAllBackups : SettingsAction
 }
 
@@ -40,11 +42,13 @@ class SettingsViewModel(
     val uiState: StateFlow<SettingsUiState> = combine(
         getSettingsUseCase.observeAutoBackup(),
         getSettingsUseCase.observeConfirmBeforeApply(),
+        getSettingsUseCase.observePredictiveBack(),
         propertyRepository.observeProperties()
-    ) { autoBackup, confirmBeforeApply, properties ->
+    ) { autoBackup, confirmBeforeApply, predictiveBack, properties ->
         SettingsUiState.Success(
             autoBackup = autoBackup,
             confirmBeforeApply = confirmBeforeApply,
+            predictiveBack = predictiveBack,
             appVersion = settingsRepository.let { getSettingsUseCase.getAppVersion() },
             totalProperties = properties.size,
             modifiedCount = properties.count { it.isModified }
@@ -59,6 +63,7 @@ class SettingsViewModel(
         when (action) {
             is SettingsAction.SetAutoBackup -> setAutoBackup(action.enabled)
             is SettingsAction.SetConfirmBeforeApply -> setConfirmBeforeApply(action.enabled)
+            is SettingsAction.SetPredictiveBack -> setPredictiveBack(action.enabled)
             SettingsAction.ClearAllBackups -> clearAllBackups()
         }
     }
@@ -72,6 +77,12 @@ class SettingsViewModel(
     private fun setConfirmBeforeApply(enabled: Boolean) {
         viewModelScope.launch {
             updateSettingsUseCase.setConfirmBeforeApply(enabled)
+        }
+    }
+
+    private fun setPredictiveBack(enabled: Boolean) {
+        viewModelScope.launch {
+            updateSettingsUseCase.setPredictiveBack(enabled)
         }
     }
 

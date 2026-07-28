@@ -563,5 +563,11 @@ private fun getPropertyTag(key: String): String? = when (key) {
     "persist.vivo.gamecube.support_fps" -> "帧率"
     "persist.vivo.phone.fps_default" -> "帧率"
     "persist.vivo.phone.fps_max" -> "帧率"
+    "persist.rms.big_data" -> "大数据"
+    "persist.vivo.charge_capacity_up_limit_support" -> "UI显示"
+    "persist.vivo.battery_charge_limit" -> "充电"
+    "persist.temperature.limit.counts" -> "性能"
+    "persist.vivo.support.triplewifi" -> "UI显示"
+    "ro.boot.vivo.satellite.support" -> "UI显示"
     else -> null
 }

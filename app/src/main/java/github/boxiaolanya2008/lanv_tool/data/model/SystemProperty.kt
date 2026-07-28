@@ -17,7 +17,9 @@ enum class PropertyCategory(val label: String) {
     MEMORY("内存管理"),
     DISPLAY("显示设置"),
     CHARGING("充电设置"),
-    GAME("游戏设置")
+    GAME("游戏设置"),
+    NETWORK("网络设置"),
+    PERFORMANCE("性能设置")
 }
 
 object PropertyRegistry {
@@ -173,6 +175,48 @@ object PropertyRegistry {
             description = "手机支持的最大刷新率（120Hz）",
             type = PropertyType.Selection(listOf("120"), allowEmpty = true, allowCustom = true),
             category = PropertyCategory.DISPLAY
+        ),
+        SystemProperty(
+            key = "persist.rms.big_data",
+            displayName = "RMS大数据",
+            description = "关闭RMS大数据收集（false=关闭 true=开启）",
+            type = PropertyType.Selection(listOf("false", "true"), allowEmpty = true),
+            category = PropertyCategory.PERFORMANCE
+        ),
+        SystemProperty(
+            key = "persist.vivo.charge_capacity_up_limit_support",
+            displayName = "充电限制（UI显示）",
+            description = "充电限制功能开关（0=关闭 1=开启）",
+            type = PropertyType.Selection(listOf("0", "1"), allowEmpty = true),
+            category = PropertyCategory.CHARGING
+        ),
+        SystemProperty(
+            key = "persist.vivo.battery_charge_limit",
+            displayName = "自定义充电上限",
+            description = "设置电池充电上限百分比（范围 1-100）",
+            type = PropertyType.Range(min = 1, max = 100, step = 1),
+            category = PropertyCategory.CHARGING
+        ),
+        SystemProperty(
+            key = "persist.temperature.limit.counts",
+            displayName = "关闭限频",
+            description = "温度限频阈值（数值越大越不容易限频）",
+            type = PropertyType.Selection(listOf("9999999", "0", "1"), allowEmpty = true),
+            category = PropertyCategory.PERFORMANCE
+        ),
+        SystemProperty(
+            key = "persist.vivo.support.triplewifi",
+            displayName = "三WiFi（UI显示）",
+            description = "三WiFi加速功能（yes=开启 no=关闭）",
+            type = PropertyType.Selection(listOf("yes", "no"), allowEmpty = true),
+            category = PropertyCategory.NETWORK
+        ),
+        SystemProperty(
+            key = "ro.boot.vivo.satellite.support",
+            displayName = "卫星通信（UI显示）",
+            description = "卫星通信功能开关（0=关闭 1=开启）",
+            type = PropertyType.Selection(listOf("0", "1"), allowEmpty = true),
+            category = PropertyCategory.NETWORK
         )
     )
 

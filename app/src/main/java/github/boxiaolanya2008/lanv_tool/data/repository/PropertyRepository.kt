@@ -20,9 +20,11 @@ interface SettingsRepository {
     fun observeDarkMode(): Flow<Boolean>
     fun observeAutoBackup(): Flow<Boolean>
     fun observeConfirmBeforeApply(): Flow<Boolean>
+    fun observePredictiveBack(): Flow<Boolean>
     suspend fun setDarkMode(enabled: Boolean)
     suspend fun setAutoBackup(enabled: Boolean)
     suspend fun setConfirmBeforeApply(enabled: Boolean)
+    suspend fun setPredictiveBack(enabled: Boolean)
     suspend fun getAppVersion(): String
     suspend fun getLastRestoreTime(): Long
     suspend fun setLastRestoreTime(time: Long)

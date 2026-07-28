@@ -8,6 +8,7 @@ class GetSettingsUseCase(
     fun observeDarkMode() = repository.observeDarkMode()
     fun observeAutoBackup() = repository.observeAutoBackup()
     fun observeConfirmBeforeApply() = repository.observeConfirmBeforeApply()
+    fun observePredictiveBack() = repository.observePredictiveBack()
 
     suspend fun getAppVersion(): String = repository.getAppVersion()
 }
@@ -18,4 +19,5 @@ class UpdateSettingsUseCase(
     suspend fun setDarkMode(enabled: Boolean) = repository.setDarkMode(enabled)
     suspend fun setAutoBackup(enabled: Boolean) = repository.setAutoBackup(enabled)
     suspend fun setConfirmBeforeApply(enabled: Boolean) = repository.setConfirmBeforeApply(enabled)
+    suspend fun setPredictiveBack(enabled: Boolean) = repository.setPredictiveBack(enabled)
 }
